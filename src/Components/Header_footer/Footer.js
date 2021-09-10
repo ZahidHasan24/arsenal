@@ -13,7 +13,7 @@ const Footer = () => {
                 />
             </div>
             <div className="footer_discl">
-                Arsenal 2018. All rights reserved
+                Arsenal {new Date().getFullYear()}. All rights reserved
             </div>
         </footer>
     );

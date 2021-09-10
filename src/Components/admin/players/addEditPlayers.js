@@ -1,293 +1,243 @@
-import React, { Component } from 'react';
-import AdminLayout from '../../../Hoc/AdminLayout';
+import React, { useState, useEffect } from "react";
+import AdminLayout from "../../../Hoc/AdminLayout";
+import { useParams } from "react-router-dom";
+// import FormField from '../../ui/formFields';
+// import { validate } from '../../ui/misc';
+import {
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  Button,
+  Grid,
+  FormControlLabel,
+  Checkbox,
+  Card,
+  FormHelperText,
+  Divider,
+} from "@material-ui/core";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import {
+  showErrorToast,
+  showSuccessToast,
+  textErrorHelper,
+  selectErrorHelper,
+  selectIsError,
+} from "../../ui/misc";
+import Fileuploader from "../../ui/fileuploader";
+import { firebasePlayers, firebase } from "../../../firebase";
 
-import FormField from '../../ui/formFields';
-import { validate } from '../../ui/misc';
+const defaultValues = {
+  name: "",
+  lastname: "",
+  number: "",
+  position: "",
+  image: "",
+};
 
-import Fileuploader from '../../ui/fileuploader';
-import { firebasePlayers , firebaseDB, firebase } from '../../../firebase';
+const AddEditPlayers = (props) => {
+  const [loading, setLoading] = useState(false);
+  const [formType, setFormType] = useState("");
+  const [values, setValues] = useState(defaultValues);
+  const [defaultImg, setDefaultImg] = useState("");
 
-class AddEditPlayers extends Component {
+  const formik = useFormik({
+    enableReinitialize: true,
+    initialValues: values,
+    validationSchema: Yup.object({
+      name: Yup.string().required("This input is required"),
+      lastname: Yup.string().required("This input is required"),
+      number: Yup.number()
+        .required("This input is required")
+        .min(0, "The minimum is cero")
+        .max(100, "The max is 100"),
+      position: Yup.string().required("This input is required"),
+      image: Yup.string().required("This input is required"),
+    }),
+    onSubmit: (values) => {
+      submitForm(values);
+    },
+  });
 
-    state = {
-        playerId:'',
-        formType:'',
-        formError: false,
-        formSuccess:'',
-        defaultImg:'',
-        formdata:{
-            name:{
-                element:'input',
-                value:'',
-                config:{
-                    label: 'Player Name',
-                    name:'name_input',
-                    type: 'text'
-                },
-                validation:{
-                    required: true
-                },
-                valid: false,
-                validationMessage:'',
-                showlabel: true
-            },
-            lastname:{
-                element:'input',
-                value:'',
-                config:{
-                    label: 'Player Last name',
-                    name:'lastname_input',
-                    type: 'text'
-                },
-                validation:{
-                    required: true
-                },
-                valid: false,
-                validationMessage:'',
-                showlabel: true
-            },
-            number:{
-                element:'input',
-                value:'',
-                config:{
-                    label: 'Player number',
-                    name:'number_input',
-                    type: 'text'
-                },
-                validation:{
-                    required: true
-                },
-                valid: false,
-                validationMessage:'',
-                showlabel: true
-            },
-            position:{
-                element:'select',
-                value:'',
-                config:{
-                    label: 'Select a position',
-                    name:'select_position',
-                    type: 'select',
-                    options: [
-                        {key:"Keeper",value:"Keeper"},
-                        {key:"Defence",value:"Defence"},
-                        {key:"Midfield",value:"Midfield"},
-                        {key:"Striker",value:"Striker"}
-                    ]
-                },
-                validation:{
-                    required: true
-                },
-                valid: false,
-                validationMessage:'',
-                showlabel: true
-            },
-            image:{
-                element:'image',
-                value:'',
-                validation:{
-                    required: true
-                },
-                valid:false
-            }
-        }
-    }
+  const submitForm = (values) => {
+    let dataToSubmit = values;
+    setLoading(true);
 
-    updateFields = (player, playerId, formType , defaultImg) =>{
-        const newFormdata = { ...this.state.formdata}
-
-        for(let key in newFormdata){
-            newFormdata[key].value = player[key];
-            newFormdata[key].valid = true
-        }
-
-        this.setState({
-            playerId,
-            defaultImg,
-            formType,
-            formdata: newFormdata
+    if (formType === "add") {
+      firebasePlayers
+        .add(dataToSubmit)
+        .then(() => {
+          showSuccessToast("Player added");
+          formik.resetForm();
+          props.history.push("/admin_players");
         })
-    }
-
-
-    componentDidMount(){
-        const playerId = this.props.match.params.id;
-
-        if(!playerId){
-            this.setState({
-                formType:'Add player'
-            })
-        } else {
-           firebaseDB.ref(`players/${playerId}`).once('value')
-           .then(snapshot => {
-               const playerData = snapshot.val();
-
-                firebase.storage().ref('players')
-                .child(playerData.image).getDownloadURL()
-                .then( url => {
-                    this.updateFields(playerData,playerId,'Edit player',url)
-                }).catch( e => {
-                    this.updateFields({
-                        ...playerData,
-                        image:''
-                    },playerId,'Edit player','')
-                })
-           })
-        }
-
-    }
-
-
-    updateForm(element, content = ''){
-        const newFormdata = {...this.state.formdata}
-        const newElement = { ...newFormdata[element.id]}
-
-        if(content === ''){
-            newElement.value = element.event.target.value;
-        } else {
-            newElement.value = content
-        }
-        
-        let validData = validate(newElement)
-        newElement.valid = validData[0];
-        newElement.validationMessage = validData[1]
-
-        newFormdata[element.id] = newElement;
-
-        this.setState({
-            formError: false,
-            formdata: newFormdata
-        })
-    }
-
-
-    successForm = (message) => {
-        this.setState({
-            formSuccess: message
+        .catch((error) => {
+          showErrorToast(error);
         });
-        setTimeout(()=>{
-            this.setState({
-                formSuccess:''
-            });
-        },2000)
-
-    }
-
-    submitForm(event){
-        event.preventDefault();
-        
-        let dataToSubmit = {};
-        let formIsValid = true;
-
-        for(let key in this.state.formdata){
-            dataToSubmit[key] = this.state.formdata[key].value;
-            formIsValid = this.state.formdata[key].valid && formIsValid;
-        }
-    
-        if(formIsValid){
-            if(this.state.formType === 'Edit player'){
-                firebaseDB.ref(`players/${this.state.playerId}`)
-                .update(dataToSubmit).then(()=>{
-                    this.successForm('Update correctly');
-                }).catch(e=>{
-                    this.setState({formError: true})
-                })
-            } else {
-                firebasePlayers.push(dataToSubmit).then(()=>{
-                    this.props.history.push('/admin_players')
-                }).catch(e=>{
-                    this.setState({
-                        formError: true
-                    })
-                })
-            }
-           
-        } else {
-            this.setState({
-                formError: true
-            })
-        }
-    }
-
-    resetImage = () => {
-        const newFormdata = {...this.state.formdata}
-        newFormdata['image'].value = '';
-        newFormdata['image'].valid = false;
-        
-        this.setState({
-            defaultImg:'',
-            formdata: newFormdata
+    } else {
+      firebasePlayers
+        .doc(props.match.params.playerid)
+        .update(dataToSubmit)
+        .then(() => {
+          showSuccessToast("Player updated");
         })
+        .catch((error) => {
+          showErrorToast(error);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
+  };
 
-    storeFilename = (filename) => {
-        this.updateForm({id:'image'},filename)
+  useEffect(() => {
+    const param = props.match.params.playerid;
+    if (param) {
+      firebasePlayers
+        .doc(param)
+        .get()
+        .then((snapshot) => {
+          if (snapshot.data()) {
+            ////
+            firebase
+              .storage()
+              .ref("players")
+              .child(snapshot.data().image)
+              .getDownloadURL()
+              .then((url) => {
+                updateImageName(snapshot.data().image);
+                setDefaultImg(url);
+              });
+
+            setFormType("edit");
+            setValues(snapshot.data());
+          } else {
+            showErrorToast("Sorry, nothing was found");
+          }
+        })
+        .catch((error) => {
+          showErrorToast(error);
+        });
+    } else {
+      setFormType("add");
+      setValues(defaultValues);
     }
+  }, [props.match.params.playerid]);
 
-    render() {
-        return (
-            <AdminLayout>
-                <div className="editplayers_dialog_wrapper">
-                    <h2>
-                        {this.state.formType}
-                    </h2>
-                    <div>
-                        <form onSubmit={(event)=> this.submitForm(event)}>
-            
-                            <Fileuploader
-                                dir="players"
-                                tag={"Player image"}
-                                defaultImg={this.state.defaultImg}
-                                defaultImgName={this.state.formdata.image.value}
-                                resetImage={()=> this.resetImage()}
-                                filename={(filename)=> this.storeFilename(filename)}
-                            />
+  const updateImageName = (filename) => {
+    formik.setFieldValue("image", filename);
+  };
 
-
-                            <FormField
-                                id={'name'}
-                                formdata={this.state.formdata.name}
-                                change={(element)=> this.updateForm(element)}
-                                
-                            />
-
-                            <FormField
-                                id={'lastname'}
-                                formdata={this.state.formdata.lastname}
-                                change={(element)=> this.updateForm(element)}
-                            />
-
-                            <FormField
-                                id={'number'}
-                                formdata={this.state.formdata.number}
-                                change={(element)=> this.updateForm(element)}
-                            />
-
-                            <FormField
-                                id={'position'}
-                                formdata={this.state.formdata.position}
-                                change={(element)=> this.updateForm(element)}
-                            />
-
-                        <div className="success_label">{this.state.formSuccess}</div>
-                            {this.state.formError ? 
-                                <div className="error_label">
-                                    Something is wrong
-                                </div>
-                                : ''
-                            }
-                            <div className="admin_submit">
-                                <button onClick={(event)=> this.submitForm(event)}>
-                                    {this.state.formType}
-                                </button>
-                            </div>
-                        </form>
-
+  const resetImage = () => {
+    formik.setFieldValue("image", "");
+    setDefaultImg("");
+  };
+  
+  
+  return (
+    <AdminLayout title={formType === "add" ? "Add player" : "Edit player"}>
+      <Grid container spacing={4}>
+        <Grid item xs={12} lg={6}>
+          <Card className="p-4 mb-4">
+            <div className="font-size-lg font-weight-bold">Player Info</div>
+            <Divider className="my-4" />
+            <Grid container spacing={4}>
+              <Grid item xs={12} lg={12}>
+                <form onSubmit={formik.handleSubmit}>
+                  <div className="p-3">
+                    <div className="mb-5">
+                      <FormControl error={selectIsError(formik, "image")}>
+                        <Fileuploader
+                          dir="players"
+                          defaultImg={defaultImg} /// image url
+                          defaultImgName={formik.values.image} /// name of file
+                          filename={(filename) => updateImageName(filename)}
+                          resetImage={() => resetImage()}
+                        />
+                        {selectErrorHelper(formik, "image")}
+                      </FormControl>
                     </div>
-                </div>
-            </AdminLayout>
-        );
-    }
-}
+                    <div className="mb-5">
+                      <FormControl fullWidth>
+                        <TextField
+                          id="name"
+                          name="name"
+                          variant="outlined"
+                          placeholder="Add firstname"
+                          {...formik.getFieldProps("name")}
+                          {...textErrorHelper(formik, "name")}
+                        />
+                      </FormControl>
+                    </div>
+
+                    <div className="mb-5">
+                      <FormControl fullWidth>
+                        <TextField
+                          id="lastname"
+                          name="lastname"
+                          variant="outlined"
+                          placeholder="Add lastname"
+                          {...formik.getFieldProps("lastname")}
+                          {...textErrorHelper(formik, "lastname")}
+                        />
+                      </FormControl>
+                    </div>
+
+                    <div className="mb-5">
+                      <FormControl fullWidth>
+                        <TextField
+                          type="number"
+                          id="number"
+                          name="number"
+                          variant="outlined"
+                          placeholder="Add number"
+                          {...formik.getFieldProps("number")}
+                          {...textErrorHelper(formik, "number")}
+                        />
+                      </FormControl>
+                    </div>
+
+                    <div className="mb-5">
+                      <FormControl
+                        error={selectIsError(formik, "position")}
+                        fullWidth
+                      >
+                        <Select
+                          id="position"
+                          name="position"
+                          variant="outlined"
+                          displayEmpty
+                          {...formik.getFieldProps("position")}
+                        >
+                          <MenuItem value="" disabled>
+                            Select a position
+                          </MenuItem>
+                          <MenuItem value="Keeper">Keeper</MenuItem>
+                          <MenuItem value="Defence">Defence</MenuItem>
+                          <MenuItem value="Midfield">Midfield</MenuItem>
+                          <MenuItem value="Striker">Striker</MenuItem>
+                        </Select>
+                        {selectErrorHelper(formik, "position")}
+                      </FormControl>
+                    </div>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="primary"
+                      disabled={loading}
+                    >
+                      {formType === "add" ? "Add player" : "Edit player"}
+                    </Button>
+                  </div>
+                </form>
+              </Grid>
+            </Grid>
+          </Card>
+        </Grid>
+      </Grid>
+    </AdminLayout>
+  );
+};
 
 export default AddEditPlayers;

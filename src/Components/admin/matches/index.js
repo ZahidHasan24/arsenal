@@ -1,87 +1,144 @@
-import React, { Component } from 'react';
-import { Link } from 'react-router-dom';
-import AdminLayout from '../../../Hoc/AdminLayout';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
-import Paper from '@material-ui/core/Paper';
-import CircularProgress from '@material-ui/core/CircularProgress';
-import { firebaseMatches } from '../../../firebase';
-import { firebaseLooper, reverseArray } from '../../ui/misc';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import AdminLayout from "../../../Hoc/AdminLayout";
+import { Button, CircularProgress, Card } from "@material-ui/core";
+import { firebaseMatches } from "../../../firebase";
+import { showErrorToast } from "../../ui/misc";
 
-class AdminMatches extends Component {
-    state = {
-        isLoading: true,
-        matches: []
-    }
-    componentDidMount(){
-        firebaseMatches.once('value').then((snapshot) => {
-            const matches = firebaseLooper(snapshot);
-            this.setState({
-                isLoading: false,
-                matches: reverseArray(matches)
-            });
+const AdminMatches = () => {
+  const [lastVisible, setLastVisible] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [matches, setMatches] = useState(null);
+
+  useEffect(() => {
+    if (!matches) {
+      setLoading(true);
+      firebaseMatches
+        .limit(2)
+        .get()
+        .then((snapshot) => {
+          const lastVisible = snapshot.docs[snapshot.docs.length - 1];
+          const matches = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setLastVisible(lastVisible);
+          setMatches(matches);
+        })
+        .catch((error) => {
+          showErrorToast(error);
+        })
+        .finally(() => {
+          setLoading(false);
         });
     }
-    render() { 
-        return (
-            <AdminLayout>
+  }, [matches]);
 
-                <div>
-                    <Paper>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>Date</TableCell>
-                                    <TableCell>Match</TableCell>
-                                    <TableCell>Result</TableCell>
-                                    <TableCell>Final</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                { this.state.matches ? 
-                                    this.state.matches.map((match,i) => (
-                                        <TableRow key={i}>
-                                            <TableCell>{match.date}</TableCell>
-                                            <TableCell>
-                                                <Link 
-                                                    to={`/admin_matches/edit_match/${match.id}`}
-                                                >
-                                                    {match.away} <strong>-</strong> {match.local}
+  const loadMoreMatches = () => {
+    if (lastVisible) {
+      setLoading(true);
+      firebaseMatches
+        .startAfter(lastVisible)
+        .limit(2)
+        .get()
+        .then((snapshot) => {
+          const lastVisible = snapshot.docs[snapshot.docs.length - 1];
+          const newMatches = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
 
-                                                </Link>
-                                            </TableCell>
-                                            <TableCell>
-                                                {match.resultAway} <strong>-</strong> {match.resultLocal}
-                                            </TableCell>
-                                            <TableCell>
-                                                { match.final === 'Yes' ?
-                                                    <span className="matches_tag_red">Final</span>
-                                                    :
-                                                    <span className="matches_tag_green">Not played yet</span>
-                                                }
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                    : null
-                                }
-                            </TableBody>
-                        </Table>
-                    </Paper>
-                    <div className="admin_progress">
-                        { this.state.isLoading ?
-                            <CircularProgress thickness={7} style={{ color: '#0d1831' }}/>
-                            : ''
-                        }     
-                    </div>
-                </div>
-
-                
-            </AdminLayout>
-        );
+          setLastVisible(lastVisible);
+          setMatches([...matches, ...newMatches]);
+        })
+        .catch((error) => {
+          showErrorToast(error);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      showErrorToast("nothing to load");
     }
-}
- 
+  };
+
+  return (
+    <AdminLayout title="The matches">
+      <Card className="card-box mb-4">
+        <div className="card-header d-flex align-items-center py-3">
+          <div className="card-header--title font-size-lg font-weight-bold flex-grow-1"></div>
+          <div className="card-header--actions">
+            <Button
+              variant="contained"
+              component={Link}
+              to={"/admin_matches/add_match"}
+              color="primary"
+              className="action-btn"
+            >
+              Add match
+            </Button>
+          </div>
+        </div>
+        <div className="table-responsive">
+          <table className="table table-hover text-nowrap mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Match</th>
+                <th>Result</th>
+                <th>Final</th>
+              </tr>
+            </thead>
+            <tbody>
+              {matches
+                ? matches.map((match, i) => (
+                    <tr key={i}>
+                      <td>{match.date}</td>
+                      <td>
+                        <Link to={`/admin_matches/edit_match/${match.id}`}>
+                          {match.away} <strong>-</strong> {match.local}
+                        </Link>
+                      </td>
+                      <td>
+                        {match.resultAway} <strong>-</strong>{" "}
+                        {match.resultLocal}
+                      </td>
+                      <td>
+                        {match.final === "Yes" ? (
+                          <span className="matches_tag_red">Final</span>
+                        ) : (
+                          <span className="matches_tag_green">
+                            Not played yet
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                : null}
+            </tbody>
+          </table>
+        </div>
+        <div className="card-footer py-3 text-center">
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => loadMoreMatches()}
+            disabled={loading}
+          >
+            View more
+          </Button>
+          <div>
+            {loading ? (
+              <CircularProgress
+                thickness={7}
+                style={{ color: "#98c5e9", marginTop: "10px" }}
+              />
+            ) : null}
+          </div>
+        </div>
+      </Card>
+    </AdminLayout>
+  );
+};
+
 export default AdminMatches;

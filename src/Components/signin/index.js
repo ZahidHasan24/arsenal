@@ -1,122 +1,87 @@
-import React, { Component } from 'react';
-import { firebase } from '../../firebase';
-import FormField from '../ui/formFields';
-import { validate } from '../ui/misc';
+import React, { useState } from "react";
+import { firebase } from "../../firebase";
+import { CircularProgress } from "@material-ui/core";
+import { Redirect, useHistory } from "react-router-dom";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { showErrorToast, showSuccessToast } from "../ui/misc";
 
+const SignIn = ({ user }) => {
+  const history = useHistory();
+  const [loading, setLoading] = useState(false);
+  const formik = useFormik({
+    initialValues: {
+      email: "admin@admin.com",
+      password: "admin@1234",
+    },
+    validationSchema: Yup.object({
+      email: Yup.string()
+        .email("Invalid email address")
+        .required("The email is required"),
+      password: Yup.string().required("The email is required"),
+    }),
+    onSubmit: (values) => {
+      setLoading(true);
+      submitForm(values);
+    },
+  });
+  const submitForm = (values) => {
+    firebase
+      .auth()
+      .signInWithEmailAndPassword(values.email, values.password)
+      .then(() => {
+        showSuccessToast("Welcome back !!");
+        history.push("/dashboard");
+      })
+      .catch((error) => {
+        setLoading(false);
+        showErrorToast(error.message);
+      });
+  };
 
-class SignIn extends Component {
-    state = {
-        formError: false,
-        formSuccess: '',
-        formdata: {
-            email: {
-                element: 'input',
-                value: '',
-                config: {
-                    name: 'email_input',
-                    type: 'email',
-                    placeholder: 'Enter your email'
-                },
-                validation: {
-                    required: true,
-                    email: true
-                },
-                valid: false,
-                validationMessage: ''
-            },
-            password: {
-                element: 'input',
-                value: '',
-                config: {
-                    name: 'password_input',
-                    type: 'password',
-                    placeholder: 'Enter your password'
-                },
-                validation: {
-                    required: true,
-                },
-                valid: false,
-                validationMessage: ''
-            }
-        }
-    }
+  return (
+    <>
+      {!user ? (
+        <div className="container">
+          <div className="signin_wrapper" style={{ margin: "100px" }}>
+            <form onSubmit={formik.handleSubmit}>
+              <h2>Please login</h2>
+              <input
+                name="email"
+                placeholder="Email"
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                value={formik.values.email}
+              />
+              {formik.touched.email && formik.errors.email ? (
+                <div className="error_label">{formik.errors.email}</div>
+              ) : null}
 
-    updateForm(element){
-        const newFormdata = {...this.state.formdata};
-        const newElement = {...newFormdata[element.id]};
+              <input
+                placeholder="enter your password"
+                name="password"
+                type="password"
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                value={formik.values.password}
+              />
+              {formik.touched.password && formik.errors.password ? (
+                <div className="error_label">{formik.errors.password}</div>
+              ) : null}
 
-        newElement.value = element.event.target.value;
+              {loading ? (
+                <CircularProgress color="secondary" className="progress" />
+              ) : (
+                <button type="submit">Log in</button>
+              )}
+            </form>
+          </div>
+        </div>
+      ) : (
+        <Redirect to={"/dashboard"} />
+      )}
+    </>
+  );
+};
 
-        let valiData = validate(newElement);
-        newElement.valid = valiData[0];
-        newElement.validationMessage = valiData[1];
-
-        newFormdata[element.id] = newElement;
-
-        this.setState({
-            formError: false,
-            formdata: newFormdata
-        });
-    }
-
-    submitForm(event){
-        event.preventDefault();
-        let dataToSubmit = {};
-        let formIsValid = true;
-
-        for(let key in this.state.formdata){
-            dataToSubmit[key] = this.state.formdata[key].value;
-            formIsValid = this.state.formdata[key].valid && formIsValid;
-        }
-
-        if(formIsValid){
-            firebase.auth()
-                .signInWithEmailAndPassword(
-                    dataToSubmit.email,
-                    dataToSubmit.password
-                ).then(() => {
-                    this.props.history.push('/dashboard');
-                }).catch(error => {
-                    console.log(error);
-                    this.setState({
-                        formError: true
-                    });
-                });
-        }else{
-            this.setState({
-                formError: true
-            });
-        }
-
-    }
-
-
-    render() { 
-        return (
-            <div className="container">
-                <div className="signin_wrapper" style={{margin: '100px'}}>
-                     <form onSubmit={(event) => this.submitForm(event)}>
-                        <h2>Please Login</h2>
-                        <FormField 
-                            id={'email'}
-                            formdata={this.state.formdata.email}
-                            change={(element) => this.updateForm(element)}
-                        />
-                        <FormField 
-                            id={'password'}
-                            formdata={this.state.formdata.password}
-                            change={(element) => this.updateForm(element)}
-                        />
-                        { this.state.formError ? 
-                            <div className="error_label">Something is wrong, try again.</div> 
-                            : null 
-                        }
-                        <button onClick={(event) => this.submitForm(event)}>Login</button>
-                     </form>
-                </div>     
-            </div>
-        );
-    }
-}
- 
 export default SignIn;

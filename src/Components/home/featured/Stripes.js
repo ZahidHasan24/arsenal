@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React from "react";
 import { easePolyOut } from "d3-ease";
 import { Animate } from "react-move";
 
@@ -30,7 +30,7 @@ const Stripes = () => {
   const showStripes = () =>
     stripes.map((stripe, i) => (
       <Animate
-        key={stripe.id}
+        key={i}
         show={true}
         start={{
           background: "#ffffff",

@@ -1,50 +1,44 @@
-import React, { Component } from 'react';
-import { firebaseMatches } from '../../../firebase';
-import { firebaseLooper, reverseArray } from '../../ui/misc';
+import React, { useState, useEffect } from "react";
+import { firebaseMatches } from "../../../firebase";
+import MatchesBlock from "../../ui/matches_block";
+import { Slide } from "react-awesome-reveal";
 
-import MatchesBlock from '../../ui/matches_block';
-import Slide from 'react-reveal/Slide'
+const Blocks = () => {
+  const [matches, seMatches] = useState([]);
 
-class Blocks extends Component {
-
-    state = {
-        matches:[]
-    }
-
-    componentDidMount(){
-        firebaseMatches.limitToLast(6).once('value').then((snapshot)=>{
-            const matches = firebaseLooper(snapshot);
-
-            this.setState({
-                matches: reverseArray(matches)
-            });
+  useEffect(() => {
+    if (!matches.length > 0) {
+      firebaseMatches
+        .get()
+        .then((snapshot) => {
+          const matches = snapshot.docs.map((doc) => {
+            return {
+              id: doc.id,
+              ...doc.data(),
+            };
+          });
+          seMatches(matches);
         })
+        .catch((error) => {
+          console.log(error);
+        });
     }
+  }, [matches]);
 
-
-    showMatches = (matches) => (
-        matches ?
-            matches.map((match)=>(
-                <Slide bottom key={match.id}>
-                    <div className="item">
-                        <div className="wrapper">
-                            <MatchesBlock match={match}/>
-                        </div>
-                    </div>
-                </Slide>
-            ))
-        :null
-    )
-
-
-    render() {
-        console.log(this.state)
-        return (
-            <div className="home_matches">
-                {this.showMatches(this.state.matches)}
+  const showMatches = (matches) =>
+    matches
+      ? matches.map((match) => (
+          <Slide bottom key={match.id} className="item" triggerOnce>
+            <div>
+              <div className="wrapper">
+                <MatchesBlock match={match} />
+              </div>
             </div>
-        );
-    }
-}
+          </Slide>
+        ))
+      : null;
+
+  return <div className="home_matches">{showMatches(matches)}</div>;
+};
 
 export default Blocks;
