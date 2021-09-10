@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { firebase } from "firebase/app";
+import { firebase } from "../../firebase";
 import { toast } from "react-toastify";
 import { FormHelperText } from "@material-ui/core";
 
@@ -94,3 +94,11 @@ export const selectErrorHelper = (formik, values) => {
 export const selectIsError = (formik, values) => {
   return formik.errors[values] && formik.touched[values];
 };
+export const logoutHandler = () => {
+  firebase.auth().signOut()
+  .then(()=>{
+      showSuccessToast('Good bye!!')
+  }).catch(error => {
+      showErrorToast(error.message)
+  })
+}

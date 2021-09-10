@@ -4,27 +4,29 @@ import AdminLayout from "../../../Hoc/AdminLayout";
 
 import { Button, CircularProgress, Card } from "@material-ui/core";
 import { showErrorToast } from "../../ui/misc";
-import { firebasePlayers } from "../../../firebase";
+import { firebaseTeams } from "../../../firebase";
 
-const AdminPlayers = () => {
+const LIMIT = 20;
+
+const AdminTeams = () => {
   const [lastVisible, setLastVisible] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [players, setPlayers] = useState(null);
+  const [teams, setTeams] = useState(null);
 
   useEffect(() => {
-    if (!players) {
+    if (!teams) {
       setLoading(true);
-      firebasePlayers
-        .limit(5)
+      firebaseTeams
+        .limit(LIMIT)
         .get()
         .then((snapshot) => {
           const lastVisible = snapshot.docs[snapshot.docs.length - 1];
-          const players = snapshot.docs.map((doc) => ({
+          const teams = snapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           }));
           setLastVisible(lastVisible);
-          setPlayers(players);
+          setTeams(teams);
         })
         .catch((error) => {
           showErrorToast(error);
@@ -33,24 +35,24 @@ const AdminPlayers = () => {
           setLoading(false);
         });
     }
-  }, [players]);
+  }, [teams]);
 
-  const loadMorePlayers = () => {
+  const loadMoreTeams = () => {
     if (lastVisible) {
       setLoading(true);
-      firebasePlayers
+      firebaseTeams
         .startAfter(lastVisible)
-        .limit(5)
+        .limit(LIMIT)
         .get()
         .then((snapshot) => {
           const lastVisible = snapshot.docs[snapshot.docs.length - 1];
-          const newPlayers = snapshot.docs.map((doc) => ({
+          const newTeams = snapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           }));
 
           setLastVisible(lastVisible);
-          setPlayers([...players, ...newPlayers]);
+          setTeams([...teams, ...newTeams]);
         })
         .catch((error) => {
           showErrorToast(error);
@@ -64,7 +66,7 @@ const AdminPlayers = () => {
   };
 
   return (
-    <AdminLayout title="The players">
+    <AdminLayout title="All Teams">
       <Card className="card-box mb-4">
         <div className="card-header d-flex align-items-center py-3">
           <div className="card-header--title font-size-lg font-weight-bold flex-grow-1"></div>
@@ -73,10 +75,10 @@ const AdminPlayers = () => {
               color="primary"
               variant="contained"
               component={Link}
-              to={"/admin_players/add_player"}
+              to={"/admin_teams/add_team"}
               className="action-btn"
             >
-              Add player
+              Add Team
             </Button>
           </div>
         </div>
@@ -84,28 +86,24 @@ const AdminPlayers = () => {
           <table className="table table-hover text-nowrap mb-0">
             <thead>
               <tr>
-                <th>First name</th>
-                <th>Last name</th>
-                <th>Number</th>
-                <th>Position</th>
+                <th>Name</th>
+                <th>Stadium</th>
               </tr>
             </thead>
             <tbody>
-              {players
-                ? players.map((player, i) => (
-                    <tr key={player.id}>
+              {teams
+                ? teams.map((team, i) => (
+                    <tr key={team.id}>
                       <td>
-                        <Link to={`/admin_players/edit_player/${player.id}`}>
-                          {player.name}
+                        <Link to={`/admin_teams/edit_team/${team.id}`}>
+                          {team.name}
                         </Link>
                       </td>
                       <td>
-                        <Link to={`/admin_players/edit_player/${player.id}`}>
-                          {player.lastname}
+                      <Link to={`/admin_teams/edit_team/${team.id}`}>
+                          {team.stadium}
                         </Link>
                       </td>
-                      <td>{player.number}</td>
-                      <td>{player.position}</td>
                     </tr>
                   ))
                 : null}
@@ -116,7 +114,7 @@ const AdminPlayers = () => {
           <Button
             variant="outlined"
             color="primary"
-            onClick={() => loadMorePlayers()}
+            onClick={() => loadMoreTeams()}
             disabled={loading}
           >
             View more
@@ -135,4 +133,4 @@ const AdminPlayers = () => {
   );
 };
 
-export default AdminPlayers;
+export default AdminTeams;

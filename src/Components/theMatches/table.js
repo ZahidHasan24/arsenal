@@ -1,88 +1,70 @@
-import React, { Component } from 'react';
-import { firebaseDB } from '../../firebase';
-import { firebaseLooper } from '../ui/misc';
+import React, { useEffect, useState } from "react";
+import { firebaseTeams } from "../../firebase";
 
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableHead from '@material-ui/core/TableHead';
-import TableRow from '@material-ui/core/TableRow';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+} from "@material-ui/core";
 
-const style ={
-    cell:{
-        padding: '4px 16px 4px 11px',
-        borderBottom: '1px solid #a10215',
-        color: '#a79154',
-        textAlign: 'center'
+const LeagueTable = () => {
+  const [positions, setPosition] = useState(null);
+
+  useEffect(() => {
+    if (!positions) {
+      firebaseTeams.get().then((snapshot) => {
+        const positions = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        const sortedPositions = sortFn(positions);
+        setPosition(sortedPositions);
+      });
     }
-}
+  }, [positions]);
 
+  const sortFn = (teams) => {
+    return teams.sort(
+      (b, a) => a.point - b.point || a.gd - b.gd || a.gf - b.gf || a.ga - b.ga
+    );
+  };
 
-class LeagueTable extends Component {
+  const showTeamPositions = () =>
+    positions
+      ? positions.map((pos, i) => (
+          <TableRow key={i}>
+            <TableCell>{i + 1}</TableCell>
+            <TableCell>{pos.name}</TableCell>
+            <TableCell>{pos.win}</TableCell>
+            <TableCell>{pos.draw}</TableCell>
+            <TableCell>{pos.lose}</TableCell>
+            <TableCell>{pos.point}</TableCell>
+          </TableRow>
+        ))
+      : null;
 
-    state = {
-        positions:[]
-    }
-
-    componentDidMount(){
-        firebaseDB.ref('positions').once('value').then((snapshot) => {
-            const positions = firebaseLooper(snapshot);
-
-            this.setState({
-                positions: positions
-            })
-        })
-    }
-
-
-    showTeampositions = (pos) => (
-        pos ?
-            pos.map((pos,i)=>(
-                <TableRow key={i}>
-                    <TableCell style={style.cell}>{i+1}</TableCell>
-                    <TableCell style={style.cell}>{pos.team}</TableCell>
-                    <TableCell numeric style={style.cell}>{pos.p}</TableCell>
-                    <TableCell numeric style={style.cell}>{pos.w}</TableCell>
-                    <TableCell numeric style={style.cell}>{pos.d}</TableCell>
-                    <TableCell numeric style={style.cell}>{pos.l}</TableCell>
-                    <TableCell numeric style={style.cell}>{pos.pts}</TableCell>
-                </TableRow>
-            ))
-            :null
-    )
-
-    
-   
-
-    render() {
-        
-        return (
-            <div className="league_table_wrapper">
-                <div className="title">
-                    League Table
-                </div>
-                <div style={{background: '#0d1831'}}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell style={style.cell}>Pos</TableCell>
-                            <TableCell style={style.cell}>Team</TableCell>
-                            <TableCell style={style.cell}>P</TableCell>
-                            <TableCell style={style.cell}>W</TableCell>
-                            <TableCell style={style.cell}>L</TableCell>
-                            <TableCell style={style.cell}>D</TableCell>
-                            <TableCell style={style.cell}>Pts</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {this.showTeampositions(this.state.positions)}
-                    </TableBody>
-                </Table>
-                </div>
-            </div>
-        )
-    }
+  return (
+    <div className="league_table_wrapper">
+      <div className="title">League Table</div>
+      <div>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Pos</TableCell>
+              <TableCell>Team</TableCell>
+              <TableCell>W</TableCell>
+              <TableCell>L</TableCell>
+              <TableCell>D</TableCell>
+              <TableCell>Pts</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>{showTeamPositions()}</TableBody>
+        </Table>
+      </div>
+    </div>
+  );
 };
-
 
 export default LeagueTable;

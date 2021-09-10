@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from "react";
 import AdminLayout from "../../../Hoc/AdminLayout";
-import { useParams } from "react-router-dom";
-// import FormField from '../../ui/formFields';
-// import { validate } from '../../ui/misc';
 import {
   TextField,
   Select,
@@ -10,10 +7,7 @@ import {
   FormControl,
   Button,
   Grid,
-  FormControlLabel,
-  Checkbox,
   Card,
-  FormHelperText,
   Divider,
 } from "@material-ui/core";
 import { useFormik } from "formik";

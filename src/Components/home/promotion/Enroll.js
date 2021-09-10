@@ -1,134 +1,84 @@
-import React, { Component } from 'react';
-import Fade from 'react-reveal/Fade';
-import FormField from '../../ui/formFields';
-import { validate } from '../../ui/misc';
-import { firebasePromotions } from '../../../firebase';
+import React, { useState } from "react";
+import { Fade } from "react-awesome-reveal";
+import { CircularProgress } from "@material-ui/core";
 
+import { useFormik } from "formik";
+import * as Yup from "yup";
 
-class Enroll extends Component {
+import { showErrorToast, showSuccessToast } from "../../ui/misc";
+import { firebasePromotions } from "../../../firebase";
 
-    state = {
-        formError: false,
-        formSuccess: '',
-        formdata: {
-            email: {
-                element: 'input',
-                value: '',
-                config: {
-                    name: 'email_input',
-                    type: 'email',
-                    placeholder: 'Enter your email'
-                },
-                validation: {
-                    required: true,
-                    email: true
-                },
-                valid: false,
-                validationMessage: ''
-            }
-        }
+const Enroll = () => {
+  const [loading, setLoading] = useState(false);
+
+  const formik = useFormik({
+    initialValues: { email: "" },
+    validationSchema: Yup.object({
+      email: Yup.string()
+        .email("Invalid email")
+        .required("The email is required"),
+    }),
+    onSubmit: (values, { resetForm }) => {
+      setLoading(true);
+      submitForm(values);
+    },
+  });
+
+  const submitForm = async (values) => {
+    try {
+      const isOnTheList = await firebasePromotions
+        .where("email", "==", values.email)
+        .get();
+
+      if (isOnTheList.docs.length >= 1) {
+        showErrorToast("sorry you are on the list already");
+        setLoading(false);
+        return false;
+      }
+
+      //////
+      await firebasePromotions.add({ email: values.email });
+      formik.resetForm();
+      setLoading(false);
+      showSuccessToast("Congratulation !!!:)");
+    } catch (error) {
+      showErrorToast(error);
     }
+  };
 
-    updateForm(element){
-        const newFormdata = {...this.state.formdata};
-        const newElement = {...newFormdata[element.id]};
+  return (
+    <Fade>
+      <div className="enroll_wrapper">
+        <form onSubmit={formik.handleSubmit}>
+          <div className="enroll_title">Enter your email</div>
+          <div className="enroll_input">
+            <input
+              name="email"
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              value={formik.values.email}
+              placeholder="Enter your email"
+            />
 
-        newElement.value = element.event.target.value;
+            {formik.touched.email && formik.errors.email ? (
+              <div className="error_label">{formik.errors.email}</div>
+            ) : null}
 
-        let valiData = validate(newElement);
-        newElement.valid = valiData[0];
-        newElement.validationMessage = valiData[1];
+            {loading ? (
+              <CircularProgress color="secondary" className="progress" />
+            ) : (
+              <button type="submit">Enroll</button>
+            )}
 
-        newFormdata[element.id] = newElement;
+            <div className="enroll_discl">
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+              eiusmod tempor incididunt ut labore et dolore magna aliqua.
+            </div>
+          </div>
+        </form>
+      </div>
+    </Fade>
+  );
+};
 
-        this.setState({
-            formError: false,
-            formdata: newFormdata
-        });
-    }
-
-    resetFormSuccess(type){
-        const newFormdata = {...this.state.formdata}
-
-        for(let key in newFormdata){
-            newFormdata[key].value = '';
-            newFormdata[key].valid = false;
-            newFormdata[key].validationMessage = '';
-        }
-
-        this.setState({
-            formError:false,
-            formdata: newFormdata,
-            formSuccess: type ? 'Congratulations' : 'Already on the database'
-        });
-        this.successMessage();
-    }
-
-    successMessage(){
-        setTimeout(()=>{
-            this.setState({
-                formSuccess:''
-            })
-        },2000)
-    }
-
-    submitForm(event){
-        event.preventDefault();
-        let dataToSubmit = {};
-        let formIsValid = true;
-
-        for(let key in this.state.formdata){
-            dataToSubmit[key] = this.state.formdata[key].value;
-            formIsValid = this.state.formdata[key].valid
-        }
-
-        if(formIsValid){
-            firebasePromotions.orderByChild('email').equalTo(dataToSubmit.email).once('value').then((snapshot) => {
-                if(snapshot.val() === null){
-                    firebasePromotions.push(dataToSubmit);
-                    this.resetFormSuccess(true);
-                }else{
-                    this.resetFormSuccess(false);
-                }
-            });
-            //this.resetFormSuccess();
-        }else{
-            this.setState({
-                formError: true
-            });
-        }
-
-    }
-
-    render() { 
-        return ( 
-            <Fade>
-                <div className="enroll_wrapper">
-                    <form onSubmit={(event) => this.submitForm(event)}>
-                        <div className="enroll_title">
-                            Enter your email
-                        </div>
-                        <div className="enroll_input">
-                            <FormField 
-                                id={'email'}
-                                formdata={this.state.formdata.email}
-                                change={(element) => this.updateForm(element)}
-                            />
-                            { this.state.formError ? 
-                                <div className="error_label">Something is wrong, try again.</div> 
-                                : null 
-                            }
-                            <div className="success_label">{this.state.formSuccess}</div>
-                            <button onClick={(event) => this.submitForm(event)}>Enroll</button>
-                            <div className="enroll_discl">
-                                Lorem Ipsum is simply dummy text of the printing and typesetting industry.
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </Fade>
-        );
-    }
-}
- 
 export default Enroll;

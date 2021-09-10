@@ -14,7 +14,7 @@ const AdminMatches = () => {
     if (!matches) {
       setLoading(true);
       firebaseMatches
-        .limit(2)
+        .limit(5)
         .get()
         .then((snapshot) => {
           const lastVisible = snapshot.docs[snapshot.docs.length - 1];
@@ -39,7 +39,7 @@ const AdminMatches = () => {
       setLoading(true);
       firebaseMatches
         .startAfter(lastVisible)
-        .limit(2)
+        .limit(5)
         .get()
         .then((snapshot) => {
           const lastVisible = snapshot.docs[snapshot.docs.length - 1];
@@ -79,7 +79,7 @@ const AdminMatches = () => {
             </Button>
           </div>
         </div>
-        <div className="table-responsive">
+        <div className="table-responsive px-3">
           <table className="table table-hover text-nowrap mb-0">
             <thead>
               <tr>
@@ -104,7 +104,7 @@ const AdminMatches = () => {
                         {match.resultLocal}
                       </td>
                       <td>
-                        {match.final === "Yes" ? (
+                        {match.final === "yes" ? (
                           <span className="matches_tag_red">Final</span>
                         ) : (
                           <span className="matches_tag_green">

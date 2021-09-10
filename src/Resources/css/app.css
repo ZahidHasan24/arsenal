@@ -515,6 +515,9 @@ footer .footer_discl {
 
 .the_matches_container {
   margin-top: 96px;
+  padding: 20px;
+  background-size: 5px 5px;
+  min-height: 100vh;
 }
 
 .the_matches_wrapper {
@@ -563,7 +566,6 @@ footer .footer_discl {
 
 .admin_container .admin_right {
   flex-grow: 1;
-  
 }
 .admin_container .admin_progress {
   text-align: center;
@@ -680,8 +682,18 @@ footer .footer_discl {
   color: white;
 }
 .font-weight-bold {
-    font-weight: 700;
+  font-weight: 700;
 }
 .font-size-lg {
-    font-size: 1.1875rem;
+  font-size: 1.1875rem;
+}
+.menu-item:hover {
+  color: #f20400;
+  background-color: white;
+}
+.half {
+  width: 49%;
+}
+.lm-1 {
+  margin-left: 10px !important;
 }

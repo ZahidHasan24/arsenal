@@ -2,7 +2,6 @@ import React, { Component } from "react";
 import { firebase } from "../../firebase";
 import FileUploader from "react-firebase-file-uploader";
 import { CircularProgress } from "@material-ui/core";
-import { Minimize } from "@material-ui/icons";
 
 class Fileuploader extends Component {
   state = {
